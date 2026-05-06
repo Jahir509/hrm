@@ -31,7 +31,7 @@ urlpatterns = [
 
     # HRM App routes
     path('api/v1/', include('core.urls')),
-    # path('api/v1/', include('leave.urls')),
+    path('api/v1/', include('leave.urls')),
     # path('api/v1/', include('attendance.urls')),
     # path('api/v1/', include('payroll.urls')),
     # path('api/v1/', include('recruitment.urls')),
