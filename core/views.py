@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 Employee = get_user_model()
 
 
-@rbac(['GET', 'POST'], roles=['admin', 'hr_manager'])
+@rbac(['GET', 'POST'],public=True)
 def department_list(request):
     if request.method == 'GET':
         serializer = DepartmentSerializer(Department.objects.all(), many=True)
@@ -22,7 +22,7 @@ def department_list(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@rbac(['GET', 'PUT', 'PATCH', 'DELETE'], roles=['admin', 'hr_manager'])
+@rbac(['GET', 'PUT', 'PATCH', 'DELETE'],public=True)
 def department_detail(request, pk):
     department = get_object_or_404(Department, pk=pk)
 
@@ -40,7 +40,7 @@ def department_detail(request, pk):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@rbac(['GET', 'POST'], roles=['admin', 'hr_manager'])
+@rbac(['GET', 'POST'],public=True)
 def employee_list(request):
     if request.method == 'GET':
         serializer = EmployeeSerializer(Employee.objects.all(), many=True)
@@ -53,7 +53,7 @@ def employee_list(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@rbac(['GET', 'PUT', 'PATCH', 'DELETE'], roles=['admin', 'hr_manager'])
+@rbac(['GET', 'PUT', 'PATCH', 'DELETE'],public=True)
 def employee_detail(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
 
