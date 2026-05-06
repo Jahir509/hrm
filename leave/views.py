@@ -51,7 +51,7 @@ def leave_type_detail(request, pk):
 @rbac(['GET'], public=True)
 def leave_balance_list(request):
     qs = LeaveBalance.objects.select_related('employee', 'leave_type').all()
-    filterset = LeaveBalanceFilter(request.GET, queryset=qs)
+    filterset = LeaveRequestFilter(request.GET, queryset=qs)
     return Response(LeaveBalanceSerializer(filterset.qs, many=True).data)
 
 
