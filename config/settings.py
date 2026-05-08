@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'training',
     'notifications',
     'accounts',
+    'events',
 ]
 
 MIDDLEWARE = [
