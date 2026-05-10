@@ -1,3 +1,79 @@
-from django.shortcuts import render
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
-# Create your views here.
+from accounts.rbac import rbac
+from .models import Notification
+from .serializers import NotificationSerializer
+from .filters import NotificationFilter
+
+
+# ── Notification List / Create ────────────────────────────────────────────────
+
+@rbac(['GET', 'POST'])
+def notification_list(request):
+    if request.method == 'GET':
+        qs = Notification.objects.filter(recipient=request.user)
+        filterset = NotificationFilter(request.GET, queryset=qs)
+        return Response(NotificationSerializer(filterset.qs, many=True).data)
+
+    # POST is restricted to admin and hr_manager
+    user_role = getattr(request.user, 'role', None)
+    if not user_role or user_role.name not in ('admin', 'hr_manager'):
+        return Response(
+            {'detail': 'You do not have permission to perform this action.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    serializer = NotificationSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ── Notification Detail / Delete ──────────────────────────────────────────────
+
+@rbac(['GET', 'DELETE'])
+def notification_detail(request, pk):
+    notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
+
+    if request.method == 'GET':
+        return Response(NotificationSerializer(notification).data)
+
+    notification.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Mark Single Notification as Read ─────────────────────────────────────────
+
+@rbac(['POST'])
+def notification_mark_read(request, pk):
+    notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
+
+    if notification.is_read:
+        return Response({'detail': 'Notification is already marked as read.'})
+
+    notification.is_read = True
+    notification.read_at = timezone.now()
+    notification.save(update_fields=['is_read', 'read_at'])
+    return Response(NotificationSerializer(notification).data)
+
+
+# ── Mark All Notifications as Read ───────────────────────────────────────────
+
+@rbac(['POST'])
+def notification_mark_all_read(request):
+    updated = Notification.objects.filter(
+        recipient=request.user, is_read=False
+    ).update(is_read=True, read_at=timezone.now())
+    return Response({'detail': f'{updated} notification(s) marked as read.'})
+
+
+# ── Unread Count ──────────────────────────────────────────────────────────────
+
+@rbac(['GET'])
+def notification_unread_count(request):
+    count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+    return Response({'unread_count': count})
