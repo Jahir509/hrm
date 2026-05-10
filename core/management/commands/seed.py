@@ -1,12 +1,13 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from accounts.models import Role, Permission, Employee
 from core.models import Department
 from leave.models import LeaveType, LeaveBalance, LeaveRequest, PublicHoliday
 from events.models import Event, EventAttendee
 from recruitment.models import JobPosting, Applicant, Application, Interview
+from attendance.models import AttendanceRecord
 
 
 def dt(y, mo, d, h=9, mi=0):
@@ -21,6 +22,7 @@ class Command(BaseCommand):
 
         # ── Clear ─────────────────────────────────────────────────────────────
         self.stdout.write("\n[0] Clearing existing data...")
+        AttendanceRecord.objects.all().delete()
         Interview.objects.all().delete()
         Application.objects.all().delete()
         Applicant.objects.all().delete()
@@ -430,6 +432,55 @@ class Command(BaseCommand):
                 result=result,
             )
 
+        # ── Attendance Records (20 employees × 25 working days = ~500) ───────
+        self.stdout.write("[15] Creating attendance records...")
+
+        def working_days_back(n):
+            """Return a list of the last n Mon-Fri dates before today."""
+            days, current = [], date(2026, 5, 9)   # anchor to seed date
+            while len(days) < n:
+                if current.weekday() < 5:           # Mon=0 … Fri=4
+                    days.append(current)
+                current -= timedelta(days=1)
+            return days
+
+        work_days = working_days_back(25)
+
+        # Deterministic status distribution per employee index
+        # 0-14 → present, 15-17 → late, 18-20 → absent, 21-22 → half_day, 23-24 → on_leave
+        def day_status(emp_idx, day_idx):
+            seed_val = (emp_idx * 7 + day_idx) % 25
+            if seed_val < 15:
+                return AttendanceRecord.STATUS_PRESENT
+            elif seed_val < 18:
+                return AttendanceRecord.STATUS_LATE
+            elif seed_val < 21:
+                return AttendanceRecord.STATUS_ABSENT
+            elif seed_val < 23:
+                return AttendanceRecord.STATUS_HALF_DAY
+            else:
+                return AttendanceRecord.STATUS_ON_LEAVE
+
+        records = []
+        for emp_idx, emp in enumerate(emp_list):
+            for day_idx, work_date in enumerate(work_days):
+                s = day_status(emp_idx, day_idx)
+                check_in = check_out = None
+                if s == AttendanceRecord.STATUS_PRESENT:
+                    check_in  = timezone.make_aware(datetime(work_date.year, work_date.month, work_date.day, 9, 0))
+                    check_out = timezone.make_aware(datetime(work_date.year, work_date.month, work_date.day, 18, 0))
+                elif s == AttendanceRecord.STATUS_LATE:
+                    check_in  = timezone.make_aware(datetime(work_date.year, work_date.month, work_date.day, 10, 15))
+                    check_out = timezone.make_aware(datetime(work_date.year, work_date.month, work_date.day, 18, 30))
+                elif s == AttendanceRecord.STATUS_HALF_DAY:
+                    check_in  = timezone.make_aware(datetime(work_date.year, work_date.month, work_date.day, 9, 0))
+                    check_out = timezone.make_aware(datetime(work_date.year, work_date.month, work_date.day, 13, 0))
+                records.append(AttendanceRecord(
+                    employee=emp, date=work_date, status=s,
+                    check_in=check_in, check_out=check_out,
+                ))
+        AttendanceRecord.objects.bulk_create(records)
+
         # ── Summary ───────────────────────────────────────────────────────────
         self.stdout.write(self.style.SUCCESS(
             f"\n✓ Seed complete.\n"
@@ -445,5 +496,6 @@ class Command(BaseCommand):
             f"  Applicants:      {Applicant.objects.count()}\n"
             f"  Applications:    {Application.objects.count()}\n"
             f"  Interviews:      {Interview.objects.count()}\n"
+            f"  Attendance:      {AttendanceRecord.objects.count()}\n"
             f"\n  All passwords: password\n"
         ))

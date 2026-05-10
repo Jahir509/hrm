@@ -34,7 +34,7 @@ urlpatterns = [
     path('api/v1/', include('leave.urls')),
     path('api/v1/', include('recruitment.urls')),
     path('api/v1/', include('events.urls')),
-    # path('api/v1/', include('attendance.urls')),
+    path('api/v1/', include('attendance.urls')),
     # path('api/v1/', include('payroll.urls')),
     # path('api/v1/', include('performance.urls')),
     # path('api/v1/', include('training.urls')),
