@@ -39,4 +39,5 @@ urlpatterns = [
     # path('api/v1/', include('performance.urls')),
     # path('api/v1/', include('training.urls')),
     path('api/v1/', include('notifications.urls')),
+    path('api/v1/', include('sprint.urls')),
 ]

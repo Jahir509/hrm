@@ -4,19 +4,13 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from accounts.rbac import rbac
+from utils.permissions import is_admin
 from .models import AttendanceRecord
 from .serializers import AttendanceRecordSerializer
 from .filters import AttendanceFilter
 
 LATE_THRESHOLD_HOUR   = 9
 LATE_THRESHOLD_MINUTE = 30
-
-_ADMIN_ROLES = ('admin', 'hr_manager')
-
-
-def _is_admin(user):
-    role = getattr(user, 'role', None)
-    return bool(role and role.name in _ADMIN_ROLES)
 
 
 # ── List / Create ─────────────────────────────────────────────────────────────
@@ -27,14 +21,14 @@ def attendance_list(request):
         # admin/hr_manager: all records; employee: own records only
         qs = (
             AttendanceRecord.objects.select_related('employee').all()
-            if _is_admin(request.user)
+            if is_admin(request.user)
             else AttendanceRecord.objects.filter(employee=request.user)
         )
         filterset = AttendanceFilter(request.GET, queryset=qs)
         return Response(AttendanceRecordSerializer(filterset.qs, many=True).data)
 
     # POST — manual record creation (admin / hr_manager only)
-    if not _is_admin(request.user):
+    if not is_admin(request.user):
         return Response(
             {'detail': 'You do not have permission to perform this action.'},
             status=status.HTTP_403_FORBIDDEN,
@@ -54,7 +48,7 @@ def attendance_detail(request, pk):
     record = get_object_or_404(AttendanceRecord, pk=pk)
 
     # employees may only view their own record
-    if not _is_admin(request.user) and record.employee != request.user:
+    if not is_admin(request.user) and record.employee != request.user:
         return Response(
             {'detail': 'You do not have permission to perform this action.'},
             status=status.HTTP_403_FORBIDDEN,
@@ -64,7 +58,7 @@ def attendance_detail(request, pk):
         return Response(AttendanceRecordSerializer(record).data)
 
     if request.method in ('PUT', 'PATCH'):
-        if not _is_admin(request.user):
+        if not is_admin(request.user):
             return Response(
                 {'detail': 'You do not have permission to perform this action.'},
                 status=status.HTTP_403_FORBIDDEN,
@@ -78,7 +72,7 @@ def attendance_detail(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # DELETE — admin only
-    if not _is_admin(request.user):
+    if not is_admin(request.user):
         return Response(
             {'detail': 'You do not have permission to perform this action.'},
             status=status.HTTP_403_FORBIDDEN,

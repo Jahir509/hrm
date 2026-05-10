@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'notifications',
     'accounts',
     'events',
+    'sprint',
 ]
 
 MIDDLEWARE = [
