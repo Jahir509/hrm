@@ -8,6 +8,7 @@ from leave.models import LeaveType, LeaveBalance, LeaveRequest, PublicHoliday
 from events.models import Event, EventAttendee
 from recruitment.models import JobPosting, Applicant, Application, Interview
 from attendance.models import AttendanceRecord
+from sprint.models import Sprint, Task
 
 
 def dt(y, mo, d, h=9, mi=0):
@@ -22,6 +23,8 @@ class Command(BaseCommand):
 
         # ── Clear ─────────────────────────────────────────────────────────────
         self.stdout.write("\n[0] Clearing existing data...")
+        Task.objects.all().delete()
+        Sprint.objects.all().delete()
         AttendanceRecord.objects.all().delete()
         Interview.objects.all().delete()
         Application.objects.all().delete()
@@ -481,6 +484,73 @@ class Command(BaseCommand):
                 ))
         AttendanceRecord.objects.bulk_create(records)
 
+        # ── Sprints (5) & Tasks (25) ──────────────────────────────────────────
+        self.stdout.write("[16] Creating sprints and tasks...")
+        admin_user = employees["usman"]
+        dev_team   = [employees[u] for u in ("bob", "carol", "grace", "karim", "mehedi", "rafiq")]
+
+        sprints_data = [
+            ("Sprint 1 — Foundation",   "Set up core modules and DB schema.",      date(2026, 1, 5),  date(2026, 1, 23), "completed"),
+            ("Sprint 2 — Auth & RBAC",  "Implement authentication and RBAC.",      date(2026, 2, 2),  date(2026, 2, 20), "completed"),
+            ("Sprint 3 — Leave Module", "Build full leave management workflow.",   date(2026, 3, 2),  date(2026, 3, 20), "completed"),
+            ("Sprint 4 — Attendance",   "Employee check-in/out and reports.",      date(2026, 4, 6),  date(2026, 4, 24), "active"),
+            ("Sprint 5 — Payroll",      "Payroll computation and slip generation.", date(2026, 5, 4),  date(2026, 5, 22), "planning"),
+        ]
+
+        sprint_objs = []
+        for name, goal, start, end, sp_status in sprints_data:
+            s = Sprint.objects.create(
+                name=name, goal=goal,
+                start_date=start, end_date=end,
+                status=sp_status, created_by=admin_user,
+            )
+            sprint_objs.append(s)
+
+        tasks_data = [
+            # (sprint_idx, title, assigned_username, status, priority, points, due)
+            (0, "Design database ERD",             "bob",    "done",        "high",     3, date(2026, 1, 8)),
+            (0, "Set up Django project structure", "carol",  "done",        "high",     2, date(2026, 1, 9)),
+            (0, "Configure PostgreSQL",             "bob",    "done",        "medium",   1, date(2026, 1, 10)),
+            (0, "Write base models",               "grace",  "done",        "high",     3, date(2026, 1, 15)),
+            (0, "Set up DRF and JWT",              "karim",  "done",        "medium",   2, date(2026, 1, 20)),
+
+            (1, "Implement Employee model",        "bob",    "done",        "high",     3, date(2026, 2, 6)),
+            (1, "Build Role & Permission models",  "carol",  "done",        "high",     3, date(2026, 2, 7)),
+            (1, "Create @rbac decorator",          "mehedi", "done",        "critical", 5, date(2026, 2, 12)),
+            (1, "JWT login endpoint",              "grace",  "done",        "high",     2, date(2026, 2, 14)),
+            (1, "Write auth tests",                "rafiq",  "done",        "medium",   2, date(2026, 2, 19)),
+
+            (2, "LeaveType CRUD",                  "bob",    "done",        "high",     3, date(2026, 3, 6)),
+            (2, "LeaveBalance logic",              "carol",  "done",        "high",     5, date(2026, 3, 10)),
+            (2, "Leave request workflow",          "mehedi", "done",        "critical", 8, date(2026, 3, 14)),
+            (2, "Leave approval endpoint",         "grace",  "done",        "high",     3, date(2026, 3, 18)),
+            (2, "Public holidays API",             "karim",  "done",        "low",      1, date(2026, 3, 19)),
+
+            (3, "AttendanceRecord model",          "bob",    "done",        "high",     3, date(2026, 4, 10)),
+            (3, "Check-in / check-out endpoints", "carol",  "done",        "critical", 5, date(2026, 4, 14)),
+            (3, "Auto late detection logic",       "mehedi", "in_review",   "high",     3, date(2026, 4, 18)),
+            (3, "Monthly summary endpoint",        "grace",  "in_progress", "medium",   2, date(2026, 4, 21)),
+            (3, "Attendance seed data",            "rafiq",  "todo",        "low",      1, date(2026, 4, 23)),
+
+            (4, "Payroll model design",            "bob",    "todo",        "high",     5, date(2026, 5, 8)),
+            (4, "Salary computation logic",        "carol",  "todo",        "critical", 8, date(2026, 5, 12)),
+            (4, "Deductions & allowances",         "mehedi", "todo",        "high",     5, date(2026, 5, 14)),
+            (4, "Payslip generation endpoint",     "grace",  "todo",        "high",     3, date(2026, 5, 19)),
+            (4, "Payroll seed data",               "karim",  "todo",        "low",      1, date(2026, 5, 21)),
+        ]
+
+        for sp_idx, title, assignee, t_status, priority, points, due in tasks_data:
+            Task.objects.create(
+                sprint=sprint_objs[sp_idx],
+                title=title,
+                assigned_to=employees[assignee],
+                created_by=admin_user,
+                status=t_status,
+                priority=priority,
+                story_points=points,
+                due_date=due,
+            )
+
         # ── Summary ───────────────────────────────────────────────────────────
         self.stdout.write(self.style.SUCCESS(
             f"\n✓ Seed complete.\n"
@@ -497,5 +567,7 @@ class Command(BaseCommand):
             f"  Applications:    {Application.objects.count()}\n"
             f"  Interviews:      {Interview.objects.count()}\n"
             f"  Attendance:      {AttendanceRecord.objects.count()}\n"
+            f"  Sprints:         {Sprint.objects.count()}\n"
+            f"  Tasks:           {Task.objects.count()}\n"
             f"\n  All passwords: password\n"
         ))
