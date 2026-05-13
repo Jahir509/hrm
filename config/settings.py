@@ -151,6 +151,7 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",   # frontend dev server
+    "http://localhost:4000",   # frontend dev server (alt port)
 ]
 
 

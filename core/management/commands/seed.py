@@ -3,7 +3,7 @@ from django.utils import timezone
 from datetime import date, datetime, timedelta
 
 from accounts.models import Role, Permission, Employee
-from core.models import Department
+from core.models import Department, Designation
 from leave.models import LeaveType, LeaveBalance, LeaveRequest, PublicHoliday
 from events.models import Event, EventAttendee
 from recruitment.models import JobPosting, Applicant, Application, Interview
@@ -37,6 +37,7 @@ class Command(BaseCommand):
         PublicHoliday.objects.all().delete()
         LeaveType.objects.all().delete()
         Employee.objects.filter(is_superuser=False).delete()
+        Designation.objects.all().delete()
         Department.objects.all().delete()
         Role.objects.all().delete()
         Permission.objects.all().delete()
@@ -82,8 +83,58 @@ class Command(BaseCommand):
         dept_names = ["Engineering", "Human Resources", "Finance", "Marketing", "Operations"]
         depts = {n: Department.objects.create(name=n) for n in dept_names}
 
+        # ── Designations (50) ─────────────────────────────────────────────────
+        self.stdout.write("[3b] Creating 50 designations (IT + managerial)...")
+        designation_names = [
+            # IT / Technical (25)
+            "Software Engineer", "Senior Software Engineer", "Lead Software Engineer",
+            "Principal Engineer", "Staff Engineer",
+            "Frontend Developer", "Backend Developer", "Full Stack Developer",
+            "Mobile App Developer", "DevOps Engineer", "Site Reliability Engineer",
+            "Cloud Architect", "Solutions Architect", "Database Administrator",
+            "Data Engineer", "Data Scientist", "Data Analyst",
+            "Machine Learning Engineer", "QA Engineer", "QA Automation Engineer",
+            "Security Engineer", "Systems Administrator", "Network Engineer",
+            "UI/UX Designer", "Technical Writer",
+            # Managerial / Cross-functional (25)
+            "Engineering Manager", "Engineering Director", "VP of Engineering",
+            "Chief Technology Officer", "Chief Executive Officer",
+            "Chief Operating Officer", "Chief Financial Officer",
+            "Chief Human Resources Officer", "Chief Marketing Officer",
+            "Product Manager", "Senior Product Manager", "Product Owner",
+            "Project Manager", "Program Manager", "Scrum Master",
+            "HR Manager", "HR Business Partner", "Recruitment Manager",
+            "Finance Manager", "Financial Analyst",
+            "Marketing Manager", "Brand Manager",
+            "Operations Manager", "Logistics Coordinator",
+            "Customer Success Manager",
+        ]
+        designations = {n: Designation.objects.create(name=n) for n in designation_names}
+
         # ── Employees (20) ────────────────────────────────────────────────────
         self.stdout.write("[4] Creating 20 employees...")
+        emp_designation_map = {
+            "alice":  "HR Manager",
+            "bob":    "Senior Software Engineer",
+            "carol":  "Software Engineer",
+            "david":  "Financial Analyst",
+            "eve":    "Brand Manager",
+            "frank":  "Operations Manager",
+            "grace":  "Backend Developer",
+            "henry":  "Finance Manager",
+            "irene":  "HR Business Partner",
+            "john":   "Logistics Coordinator",
+            "karim":  "DevOps Engineer",
+            "layla":  "Marketing Manager",
+            "mehedi": "Full Stack Developer",
+            "nasrin": "Financial Analyst",
+            "omar":   "Operations Manager",
+            "priya":  "Marketing Manager",
+            "rafiq":  "QA Engineer",
+            "sadia":  "Recruitment Manager",
+            "tanvir": "Finance Manager",
+            "usman":  "Chief Operating Officer",
+        }
         #  username, first, last, department, role, email, joined, dob, phone
         users_data = [
             ("alice",   "Alice",   "Rahman",    "Human Resources", hr_role,       "alice@hrm.com",   date(2022, 1, 15),  date(1990, 3, 12), "01711-100001"),
@@ -114,6 +165,7 @@ class Command(BaseCommand):
                 username=username, email=email, password="password",
                 first_name=first, last_name=last,
                 department=depts[dept_name], role=role,
+                designation=designations[emp_designation_map[username]],
                 date_joined_company=joined, date_of_birth=dob, phone=phone,
             )
             employees[username] = emp
@@ -556,6 +608,7 @@ class Command(BaseCommand):
             f"\n✓ Seed complete.\n"
             f"  Employees:       {Employee.objects.filter(is_superuser=False).count()}\n"
             f"  Departments:     {Department.objects.count()}\n"
+            f"  Designations:    {Designation.objects.count()}\n"
             f"  Leave Types:     {LeaveType.objects.count()}\n"
             f"  Leave Balances:  {LeaveBalance.objects.count()}\n"
             f"  Leave Requests:  {LeaveRequest.objects.count()}\n"

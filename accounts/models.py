@@ -24,6 +24,7 @@ class Role(models.Model):
 class Employee(AbstractUser):
     role = models.ForeignKey(Role, null=True, blank=True, on_delete=models.SET_NULL, related_name='employees')
     department = models.ForeignKey('core.Department', null=True, blank=True, on_delete=models.SET_NULL)
+    designation = models.ForeignKey('core.Designation', null=True, blank=True, on_delete=models.SET_NULL)
     phone = models.CharField(max_length=20, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     date_joined_company = models.DateField(null=True, blank=True)

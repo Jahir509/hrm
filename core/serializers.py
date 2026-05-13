@@ -12,7 +12,11 @@ class DepartmentSerializer(serializers.ModelSerializer):
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
+    joining_date = serializers.DateField(source='date_joined_company', format='%d-%m-%Y', input_formats=['%Y-%m-%d'])
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    designation_name = serializers.CharField(source='designation.name', read_only=True)
     class Meta:
         model = Employee
         fields = ['id', 'username', 'email', 'first_name', 'last_name',
-                  'department', 'phone', 'date_of_birth', 'profile_photo']
+                  'department_name', 'designation', 'designation_name',
+                  'phone', 'date_of_birth', 'profile_photo', 'joining_date', 'is_active']
