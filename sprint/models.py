@@ -61,7 +61,12 @@ class Task(models.Model):
         (PRIORITY_CRITICAL, 'Critical'),
     ]
 
-    sprint        = models.ForeignKey(Sprint, on_delete=models.CASCADE, related_name='tasks')
+    sprint        = models.ForeignKey(
+        Sprint,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='tasks',
+    )
     title         = models.CharField(max_length=255)
     description   = models.TextField(blank=True)
     assigned_to   = models.ForeignKey(
