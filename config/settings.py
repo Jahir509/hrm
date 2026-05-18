@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     'accounts',
     'events',
     'sprint',
+    'organization',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
