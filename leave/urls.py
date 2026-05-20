@@ -8,6 +8,7 @@ urlpatterns = [
 
     # Leave Balances
     path('leave-balances/',          views.leave_balance_list,   name='leave-balance-list'),
+    path('leave-balances/my/',       views.my_leave_balances,    name='leave-balance-my'),
     path('leave-balances/<int:pk>/', views.leave_balance_detail, name='leave-balance-detail'),
 
     # Leave Requests

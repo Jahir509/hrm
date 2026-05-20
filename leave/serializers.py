@@ -23,7 +23,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source='employee.get_full_name', read_only=True)
     leave_type_name = serializers.CharField(source='leave_type.name', read_only=True)
     reviewed_by_name = serializers.CharField(source='reviewed_by.get_full_name', read_only=True)
-
+    department_id = serializers.IntegerField(source='employee.department.id', read_only=True)
     class Meta:
         model = LeaveRequest
         fields = '__all__'
@@ -49,7 +49,30 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
         delta = (end - start).days + 1
         validated_data['total_days'] = delta
         validated_data['employee'] = self.context['request'].user
-        return super().create(validated_data)
+
+        instance = super().create(validated_data)
+
+        # Sick leaves don't require supervisor approval — they go straight
+        # to 'approved' on submission and the balance is debited
+        # immediately. The leave type name is our authority here (matches
+        # both "Sick Leave (Certified)" and "Sick Leave (Uncertified)").
+        # `status` is a read-only serializer field, so we set it on the
+        # instance directly after creation.
+        if (instance.leave_type.name or '').strip().lower().startswith('sick'):
+            from .models import LeaveBalance
+            instance.status = 'approved'
+            instance.save(update_fields=['status'])
+
+            balance, _ = LeaveBalance.objects.get_or_create(
+                employee=instance.employee,
+                leave_type=instance.leave_type,
+                year=instance.start_date.year,
+                defaults={'allocated_days': instance.leave_type.max_days_per_year},
+            )
+            balance.used_days = (balance.used_days or 0) + instance.total_days
+            balance.save()
+
+        return instance
 
 
 class LeaveApprovalSerializer(serializers.Serializer):

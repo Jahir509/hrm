@@ -13,8 +13,9 @@ class LeaveRequestFilter(django_filters.FilterSet):
         fields = ['status', 'leave_type', 'employee', 'start_date', 'end_date']
 
 class LeaveBalanceFilter(django_filters.FilterSet):
-    year = django_filters.NumberFilter(field_name='year')
+    year     = django_filters.NumberFilter(field_name='year')
+    employee = django_filters.NumberFilter(field_name='employee__id')
 
     class Meta:
         model = LeaveBalance
-        fields = ['year', 'leave_type']
+        fields = ['year', 'leave_type', 'employee']
